@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ride Booking with Traffic Data</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.8.0/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+    }
+  
+    #map {
+      width: 100%;
+      height: 100vh;
+      position: relative; /* Ensure the map is positioned properly */
+      z-index: 1; /* Set a lower z-index for the map */
+    }
+  
+    /* Popup Styling */
+    .popup-container {
+      position: absolute;
+      top: 20%;
+      left: 50%;
+      transform: translate(-50%, 0);
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+      z-index: 1000; /* Ensure the popup appears above the map */
+      text-align: center;
+      display: none;
+    }
+  
+    .popup-container button {
+      margin: 5px;
+      padding: 10px;
+      width: 40%;
+    }
+  
+    /* Top-right Alert */
+    .alert {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: orange;
+      color: white;
+      padding: 10px;
+      border-radius: 5px;
+      z-index: 1000; /* Ensure the alert appears above the map */
+      display: none;
+    }
+  
+    /* Container Styling */
+    .container {
+      position: absolute; /* Ensure it overlaps the map */
+      bottom: 20px;
+      left: 20px;
+      width: 300px;
+      margin: 0;
+      padding: 15px;
+      background-color: #898989;
+      border-radius: 8px;
+      box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+      text-align: left;
+      z-index: 1000; /* Ensure the container appears above the map */
+    }
+  
+    .container h2 {
+      color: #333;
+      font-family: Arial, sans-serif;
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+  
+    .container p {
+      color: #ffffff;
+      font-size: 12px;
+      line-height: 1.5;
+      min-height: 20px;
+      margin: 0;
+    }
+  
+    .container button {
+      background-color: #007bff;
+      color: white;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top-right alert -->
+  <div id="alert" class="alert">New Ride Request!</div>
+
+  <!-- Ride Request Popup -->
+  <div id="popup" class="popup-container">
+    <h3>New Ride Request</h3>
+    <p id="ride-info"></p>
+    <p id="fare">Estimated Fare: --</p>
+    <button onclick="acceptRide()">Accept</button>
+    <button onclick="rejectRide()">Reject</button>
+  </div>
+
+  <div class="container" style="width: 300px; margin: 50px 20px; padding: 15px; background-color: #898989; border-radius: 8px; box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1); text-align: left;">
+    <h2 style="color: #333; font-family: Arial, sans-serif; font-size: 16px; margin-bottom: 8px;">Displayed Text</h2>
+    <p id="displayText" style="color: #ffffff; font-size: 12px; line-height: 1.5; min-height: 20px; margin: 0;"></p>
+    <button onclick="goBack()" style="background-color: #007bff; color: white; padding: 8px 12px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
+      Go Back
+    </button>
+  </div>
+
+  <div id="map">
+  </div>
+
+
+
+
+
+  <!-- Map -->
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/leaflet@1.8.0/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+
+  <script>
+    var map = L.map("map").setView([12.9716, 77.5946], 13);
+
+    // OpenStreetMap Tiles
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "© OpenStreetMap contributors"
+    }).addTo(map);
+
+    var routeControl;
+
+    // Simulate receiving a new ride request from the server
+    function triggerRideRequest(source, destination) {
+      // Show alert
+      document.getElementById("alert").style.display = "block";
+
+      // Delay showing the popup
+      setTimeout(() => {
+        document.getElementById("alert").style.display = "none";
+        document.getElementById("popup").style.display = "block";
+
+        document.getElementById("ride-info").innerText = 
+          `Pickup: ${source.lat}, ${source.lng}\nDrop: ${destination.lat}, ${destination.lng}`;
+
+        // Plot the route on the map
+        if (routeControl) map.removeControl(routeControl);
+        routeControl = L.Routing.control({
+          waypoints: [
+            L.latLng(source.lat, source.lng),
+            L.latLng(destination.lat, destination.lng)
+          ],
+          routeWhileDragging: true,
+          lineOptions: { styles: [{ color: "blue", weight: 5 }] }
+        }).addTo(map);
+
+        // Estimate fare
+        calculateFare(source, destination);
+      }, 3000); // Show popup after 3 seconds
+    }
+
+    // Calculate Estimated Fare (₹10/km)
+    function calculateFare(source, destination) {
+      let distance = map.distance(
+        L.latLng(source.lat, source.lng),
+        L.latLng(destination.lat, destination.lng)
+      ) / 1000; // Convert to km
+      let fare = Math.max(30, distance * 10).toFixed(2);
+      document.getElementById("fare").innerText = `Estimated Fare: ₹${fare}`;
+    }
+
+    // Accept Ride
+    function acceptRide() {
+      alert("Ride Accepted!");
+      document.getElementById("popup").style.display = "none";
+    }
+
+    // Reject Ride
+    function rejectRide() {
+      alert("Ride Rejected!");
+      document.getElementById("popup").style.display = "none";
+      if(routeControl){
+        map.removeControl(routeControl);
+        routeControl = null;
+      }
+    }
+
+    // Example: Trigger a ride request with source and destination
+    triggerRideRequest({ lat: 12.9716, lng: 77.5946 }, { lat: 12.9352, lng: 77.6245 });
+
+  </script>
+    <script>
+      document.getElementById("displayText").innerText = localStorage.getItem("savedText") || "No text saved.";
+
+      function goBack() {
+          window.location.href = "index.html"; // Redirect back to input page
+      }
+  </script>
+</body>
+</html>

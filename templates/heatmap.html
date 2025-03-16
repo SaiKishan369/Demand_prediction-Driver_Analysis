@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heatmap on OpenStreetMap</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+    <style>
+        #map { height: 500px; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    
+    <script>
+        // Initialize Map
+        var map = L.map('map').setView([12.9716, 77.5946], 13); // Bangalore
+
+        // Add OpenStreetMap Tile Layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Sample heatmap data points (latitude, longitude, intensity)
+        var heatmapData = [
+            [12.9716, 77.5946, 0.9],
+            [12.9871126, 77.7537582, 0.9],
+    [12.9856768, 77.7470262, 0.9],
+    [12.9876393, 77.7377718, 0.9],
+    [12.9811949, 77.7275361, 0.9],
+    [12.9766408, 77.7248845, 0.9],
+    [12.977594, 77.7155586, 0.9],
+    [12.9809532, 77.7087519, 0.9],
+    [12.9888029, 77.711326, 0.9]  // Very low intensity
+        ];
+
+        // Add Heatmap Layer
+        var heat = L.heatLayer(heatmapData, {
+            radius: 25,    // Spread of heat
+            blur: 15,      // Blurriness
+            maxZoom: 15,   // Max zoom level for heat visibility
+            minOpacity: 0.3,
+            gradient: {    // Define a custom gradient for red color
+        0.0: 'rgba(255, 0, 0, 0)',    // Red (transparent)
+        0.5: 'rgba(255, 0, 0, 0.5)',  // Red (semi-transparent)
+        1.0: 'rgba(255, 0, 0, 1)'     // Red (opaque)
+    }
+
+        }).addTo(map);
+    </script>
+</body>
+</html>

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bangalore Map with BBMP Wards</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        #map { height: 90vh; width: 100%; }
+        #manual-input { display: none; position: absolute; top: 90px; left: 20px; background: white; padding: 15px; border-radius: 10px; box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2); z-index: 1000; }
+        #manual-btn { position: fixed; top: 70px; left: 20px; padding: 10px 15px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2); z-index: 1100; }
+        #manual-btn:hover { background-color: #0056b3; }
+        #prediction-result { margin-top: 10px; font-size: 18px; font-weight: bold; color: #333; }
+    </style>
+</head>
+<body>
+    <body>
+        
+        <button id="toggle-traffic" style="position: fixed; top: 170px; left: 20px; padding: 10px 15px; background-color: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2); z-index: 1100;">
+            Show Traffic
+        </button>
+        
+        <button id="manual-btn">Manual</button>
+        <div id="manual-input">
+            <label for="model-select">Select Model:</label>
+<select id="model-select">
+    <option value="model1">Model 1</option>
+    <option value="model2">Model 2</option>
+    <option value="model3">Model 3</option>
+    <option value="model4">Model 4</option>
+</select>
+
+            <br>
+            <label for="latitude">Latitude:</label>
+            <input type="text" id="latitude" placeholder="Enter latitude">
+            <br>
+            <label for="longitude">Longitude:</label>
+            <input type="text" id="longitude" placeholder="Enter longitude">
+            <br>
+            <label for="time">Time:</label>
+            <input type="time" id="time">
+            <br>
+            <button id="submit-manual">Predict</button>
+            <div id="prediction-result"></div>
+        </div>
+        
+        <script>
+            document.getElementById("manual-btn").addEventListener("click", function() {
+                const manualInput = document.getElementById("manual-input");
+                manualInput.style.display = manualInput.style.display === "none" ? "block" : "none";
+            });
+    
+            document.getElementById("submit-manual").addEventListener("click", async function () {
+                const model = document.getElementById("model-select").value;
+                const latitude = document.getElementById("latitude").value;
+                const longitude = document.getElementById("longitude").value;
+                const time = document.getElementById("time").value;
+                
+                if (!latitude || !longitude || !time) {
+                    alert("Please enter all values.");
+                    return;
+                }
+    
+                const response = await fetch("http://127.0.0.1:5000/predict", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ model: model, latitude: latitude, longitude: longitude, time: time })
+                });
+    
+                const result = await response.json();
+                document.getElementById("prediction-result").innerText = "Predicted Demand: " + result.demand;
+            });
+        </script>
+    
+    <div id="map"></div>
+    <button id="load-markers-btn" style="position: fixed; top: 320px; left: 20px; padding: 10px 15px; background-color: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2); z-index: 1100;">
+        Load All Markers
+    </button>
+    
+    <script>
+        // Redirect to all_markers.html when the button is clicked
+        document.getElementById("load-markers-btn").addEventListener("click", function () {
+            window.location.href = "all_markers.html";
+        });
+    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA1TYKQMnKUgU_ymfv8Kju8XQlz3KosN_g&callback=initMap" async defer></script>
+    <script src="{{ url_for('static', filename='map.js') }}"></script>
+    <script src="static/map.js"></script>
+    <script src="map.js"></script>
+    <script>
+        function addMetroCircles(map) {
+            fetch("static/metro_locations.json")
+                .then(response => response.json())
+                .then(metroStations => {
+                    metroStations.forEach(station => {
+                        new google.maps.Circle({
+                            strokeColor: "#FFA500",
+                            strokeOpacity: 0.8,
+                            strokeWeight: 2,
+                            fillColor: "#FFA500",
+                            fillOpacity: 0.5,
+                            map,
+                            center: { lat: station.Latitude, lng: station.Longitude },
+                            radius: 300, // Adjust the radius as needed
+                        });
+                    });
+                })
+                .catch(error => console.error("Error loading metro locations:", error));
+        }
+    </script>
+    
+    
+    
+    <script>
+        document.getElementById("submit-manual").addEventListener("click", async function () {
+            const latitude = document.getElementById("latitude").value;
+            const longitude = document.getElementById("longitude").value;
+            const time = document.getElementById("time").value;
+            
+            if (!latitude || !longitude || !time) {
+                alert("Please enter all values.");
+                return;
+            }
+
+            const response = await fetch("http://127.0.0.1:5000/predict", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ latitude: latitude, longitude: longitude, time: time })
+            });
+
+            const result = await response.json();
+            document.getElementById("prediction-result").innerText = "Predicted Demand: " + result.demand;
+        });
+    </script>
+    
+    
+    <script>
+        document.getElementById("manual-btn").addEventListener("click", function() {
+            const manualInput = document.getElementById("manual-input");
+            manualInput.style.display = manualInput.style.display === "none" ? "block" : "none";
+        });
+    </script>
+    <script src="map.js"></script>
+<script>
+    document.getElementById("submit-manual").addEventListener("click", async function () {
+        loadMetroStationsAndPredict();
+    });
+</script>
+
+<script>
+    let trafficLayer; // Declare the traffic layer variable
+
+    function initMap() {
+        const bangalore = { lat: 12.9716, lng: 77.5946 };
+        map = new google.maps.Map(document.getElementById("map"), {
+            zoom: 12,
+            center: bangalore,
+        });
+
+        // Initialize the traffic layer
+        trafficLayer = new google.maps.TrafficLayer();
+    }
+
+    // Toggle Traffic Layer ON/OFF
+    document.getElementById("toggle-traffic").addEventListener("click", function () {
+        const button = document.getElementById("toggle-traffic");
+        if (trafficLayer.getMap()) {
+            trafficLayer.setMap(null); // Turn off traffic layer
+            button.innerText = "Show Traffic";
+            button.style.backgroundColor = "#28a745"; // Change back to green
+        } else {
+            trafficLayer.setMap(map); // Turn on traffic layer
+            button.innerText = "Hide Traffic";
+            button.style.backgroundColor = "#dc3545"; // Change to red
+        }
+    });
+</script>
+
+
+
+
+
+</body>
+</html>

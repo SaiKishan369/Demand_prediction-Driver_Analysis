@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Maps with Toggleable Markers</title>
+    <style>
+        #map {
+            height: 600px;
+            width: 100%;
+        }
+        .toggle-container {
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="color: #4CAF50; font-family: Arial, sans-serif; text-align: center; background-color: #f4f4f4; padding: 7px; border-radius: 6px;">
+        SERVER SIDE
+      </h1>
+      
+    
+    <div class="toggle-container">
+        <label><input type="checkbox" id="toggleParking" checked> Parking Lots</label>
+        <label><input type="checkbox" id="toggleBusStops" checked> Bus Stops</label>
+        <label><input type="checkbox" id="toggleMallsTemples" checked> Malls & Temples</label>
+        <label><input type="checkbox" id="toggleApartments" checked> Apartments</label>
+        <label><input type="checkbox" id="toggleMetroStations" checked> Metro Stations</label>
+    </div>
+    <div id="map"></div>
+
+    <script>
+        let map;
+        let markers = {};
+
+        async function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 12,
+                center: { lat: 12.9716, lng: 77.5946 }
+            });
+
+            const response = await fetch('static/bangalore_locations.json');
+            const data = await response.json();
+
+            const categoryColors = {
+                parkingLots: "blue",
+                busStops: "red",
+                mallsTemples: "green",
+                apartments: "purple",
+                metroStations: "orange"
+            };
+
+            function addMarkers(category, locations, color) {
+                markers[category] = locations.map(location => new google.maps.Marker({
+                    position: { lat: location.Latitude, lng: location.Longitude },
+                    map: map,
+                    title: location.Name,
+                    icon: {
+                        path: google.maps.SymbolPath.CIRCLE,
+                        scale: 7,
+                        fillColor: color,
+                        fillOpacity: 0.8,
+                        strokeWeight: 1
+                    }
+                }));
+            }
+
+            for (let category in data) {
+                addMarkers(category, data[category], categoryColors[category]);
+            }
+
+            function toggleMarkers(category, isVisible) {
+                markers[category].forEach(marker => marker.setMap(isVisible ? map : null));
+            }
+
+            document.getElementById("toggleParking").addEventListener("change", function() {
+                toggleMarkers("parkingLots", this.checked);
+            });
+            document.getElementById("toggleBusStops").addEventListener("change", function() {
+                toggleMarkers("busStops", this.checked);
+            });
+            document.getElementById("toggleMallsTemples").addEventListener("change", function() {
+                toggleMarkers("mallsTemples", this.checked);
+            });
+            document.getElementById("toggleApartments").addEventListener("change", function() {
+                toggleMarkers("apartments", this.checked);
+            });
+            document.getElementById("toggleMetroStations").addEventListener("change", function() {
+                toggleMarkers("metroStations", this.checked);
+            });
+        }
+
+        
+    </script>
+
+
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA1TYKQMnKUgU_ymfv8Kju8XQlz3KosN_g&callback=initMap" async defer></script>
+</body>
+</html>

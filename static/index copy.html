@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bangalore Map with BBMP Wards</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        #map {
+            height: 90vh;
+            width: 100%;
+        }
+        #toggle-container {
+            text-align: center;
+            margin: 10px 0;
+        }
+        #manual-input {
+            display: none;
+            position: absolute;
+            top: 90px;
+            left: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+        }
+        #manual-btn {
+            position: fixed;
+            top: 70px;
+            left: 20px;
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);
+            z-index: 1100;
+        }
+        #manual-btn:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <button id="manual-btn">Manual</button>
+    
+    <div id="controls">
+        <label>
+            <input type="checkbox" id="toggle-wards" checked>
+            Show Wards
+        </label>
+        <label>
+            <input type="checkbox" id="toggle-traffic" checked>
+            Show Real-Time Traffic
+        </label>
+    </div>
+    
+    <div id="manual-input">
+        <label for="time">Time:</label>
+        <input type="time" id="time">
+        <br>
+        <label for="rain">Is it raining?</label>
+        <select id="rain">
+            <option value="no">No</option>
+            <option value="yes">Yes</option>
+        </select>
+        <br>
+        <button id="submit-manual">Submit</button>
+    </div>
+    
+    <div id="map"></div>
+    
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA1TYKQMnKUgU_ymfv8Kju8XQlz3KosN_g
+    &callback=initMap" async defer></script>
+    <script src="map.js"></script>
+    <script>
+        document.getElementById("submit-manual").addEventListener("click", async function () {
+            const time = document.getElementById("time").value;
+            const isRaining = document.getElementById("rain").value;
+    
+            if (!time) {
+                alert("Please enter a time.");
+                return;
+            }
+    
+            // Get user's current location
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(async function (position) {
+                    const latitude = position.coords.latitude;
+                    const longitude = position.coords.longitude;
+    
+                    // Send data to the Flask backend
+                    const response = await fetch("http://127.0.0.1:5000/predict", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            latitude: latitude,
+                            longitude: longitude,
+                            time: time
+                        })
+                    });
+    
+                    const result = await response.json();
+                    alert("Predicted Demand: " + result.demand);
+                }, function (error) {
+                    alert("Error getting location: " + error.message);
+                });
+            } else {
+                alert("Geolocation is not supported by this browser.");
+            }
+        });
+    </script>
+    
+    <script>
+        document.getElementById("manual-btn").addEventListener("click", function() {
+            const manualInput = document.getElementById("manual-input");
+            manualInput.style.display = manualInput.style.display === "none" ? "block" : "none";
+        });
+    </script>
+</body>
+</html>
