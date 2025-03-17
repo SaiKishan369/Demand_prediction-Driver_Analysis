@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OSM Route with Driver Toggles and SOS</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <style>
+        html, body { height: 100%; margin: 0; padding: 0; }
+        #map { width: 100%; height: 100%; }
+        .custom-driver-icon {
+            background: white;
+            padding: 5px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: bold;
+            text-align: center;
+            border: 2px solid black;
+            min-width: 80px;
+        }
+        .sos-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 10px;
+            background: red;
+            color: white;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            display: none;
+        }
+        .breakdown-button {
+            margin: 5px;
+            padding: 5px;
+            background: orange;
+            color: white;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <button id="sosButton" class="sos-button">SOS</button>
+    <div id="map"></div>
+    <div id="driverButtons"></div>
+
+    <script>
+        var map = L.map('map').setView([12.9352, 77.5120], 15);
+        L.tileLayer('https://{s}.tile.openstreetmap.de/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors',
+            maxZoom: 20,
+            detectRetina: true,
+        }).addTo(map);
+
+        var source = [12.9352, 77.5120];
+        var destination = [12.9716, 77.6412];
+        var assignedDriver = null;
+        
+        L.marker(source).addTo(map).bindPopup("Source: RR Nagar").openPopup();
+        var destinationMarker = L.marker(destination, { draggable: true }).addTo(map).bindPopup("Destination: Indiranagar");
+
+        function getRandomOffset() { return (Math.random() - 0.5) * 0.02; }
+
+        var drivers = [
+            { name: "Driver9", level: 3, rating: 1.7, completed: 107, canceled: 81, rides: 188 },
+            { name: "Driver10", level: 1, rating: 4.9, completed: 106, canceled: 12, rides: 118 },
+            { name: "Driver7", level: 2, rating: 3.7, completed: 128, canceled: 73, rides: 201 },
+            { name: "Driver8", level: 2, rating: 3.5, completed: 132, canceled: 62, rides: 194 },
+            { name: "Driver2", level: 1, rating: 4.5, completed: 138, canceled: 10, rides: 148 }
+        ];
+
+        drivers.forEach(driver => { driver.coords = [source[0] + getRandomOffset(), source[1] + getRandomOffset()]; });
+
+        var driverMarkers = {};
+        function createDriverIcon(driver, color) {
+            return L.divIcon({
+                className: "custom-driver-icon",
+                html: `<div style="background-color:${color}; padding:5px; border-radius:5px; border: 2px solid black;">
+                            ${driver.name} <br> 
+                            Level: ${driver.level} <br> 
+                            ⭐ ${driver.rating}
+                        </div>`
+            });
+        }
+
+        function displayAllDrivers() {
+            drivers.forEach((driver, index) => {
+                let marker = L.marker(driver.coords, {
+                    draggable: true,
+                    icon: createDriverIcon(driver, "white")
+                }).addTo(map);
+                driverMarkers[driver.name] = marker;
+                marker.on('dragend', function (event) {
+                    var newCoords = event.target.getLatLng();
+                    drivers[index].coords = [newCoords.lat, newCoords.lng];
+                    assignRide(source, drivers);
+                });
+                
+                let button = document.createElement("button");
+                button.innerText = `Breakdown - ${driver.name}`;
+                button.className = "breakdown-button";
+                button.onclick = function() { triggerBreakdown(driver); };
+                document.getElementById("driverButtons").appendChild(button);
+            });
+        }
+
+        function assignRide(source, drivers) {
+            let nearbyDrivers = drivers.filter(driver => 
+                getDistance(source[0], source[1], driver.coords[0], driver.coords[1]) <= 1.5
+            );
+            
+            if (nearbyDrivers.length === 0) {
+                alert("No drivers available within 1.5 km.");
+                return;
+            }
+
+            nearbyDrivers.sort((a, b) => a.level - b.level);
+            assignedDriver = nearbyDrivers[0];
+            alert(`Ride assigned to ${assignedDriver.name} (Level ${assignedDriver.level})`);
+            
+            document.getElementById('sosButton').style.display = 'block';
+            updateDriverColors();
+        }
+
+        function updateDriverColors() {
+            drivers.forEach(driver => {
+                let color = driver === assignedDriver ? 'lightgreen' : 'white';
+                let marker = driverMarkers[driver.name];
+                marker.setIcon(createDriverIcon(driver, color));
+            });
+        }
+
+        function getDistance(lat1, lon1, lat2, lon2) {
+            var R = 6371;
+            var dLat = (lat2 - lat1) * Math.PI / 180;
+            var dLon = (lon2 - lon1) * Math.PI / 180;
+            var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+                    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        }
+
+        function triggerBreakdown(driver) {
+            if (driver !== assignedDriver) return;
+            activateSOS();
+        }
+
+        function activateSOS() {
+            let otherDrivers = drivers.filter(d => d !== assignedDriver);
+            let nearest = otherDrivers.sort((a, b) => getDistance(assignedDriver.coords[0], assignedDriver.coords[1], a.coords[0], a.coords[1]) - getDistance(assignedDriver.coords[0], assignedDriver.coords[1], b.coords[0], b.coords[1]))[0];
+            
+            if (!nearest) return alert("No backup drivers available");
+            alert(`SOS activated! Ride reassigned to ${nearest.name}`);
+            assignedDriver = nearest;
+            updateDriverColors();
+        }
+
+        document.getElementById('sosButton').addEventListener('click', activateSOS);
+        displayAllDrivers();
+        assignRide(source, drivers);
+    </script>
+</body>
+</html>
